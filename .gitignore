@@ -38,3 +38,6 @@ Thumbs.db
 # models/*.onnx
 # models/*.h5
 # models/*.pkl
+
+# Deployment artifacts
+*.zip
