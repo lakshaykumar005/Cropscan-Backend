@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>CropScan — AI Crop Disease Detection</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;background:#f0f4f0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;overflow-x:hidden}
+  .screen{display:none;min-height:100vh}
+  .screen.active{display:block}
+
+  /* HEADER */
+  .hdr{background:#1a5c2e;padding:14px 16px 12px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
+  .hdr-icon{width:36px;height:36px;background:#27ae60;border-radius:50% 50% 50% 8px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+  .hdr-title{color:#fff;font-size:19px;font-weight:700;letter-spacing:-0.4px}
+  .hdr-sub{color:#a8d5b5;font-size:11px;margin-top:1px}
+  .back-btn{background:none;border:none;color:#a8d5b5;font-size:24px;cursor:pointer;padding:0 4px 0 0;line-height:1}
+  .mode-badge{margin-left:auto;font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700}
+  .mode-real{background:#27ae60;color:#fff}
+  .mode-demo{background:#e67e22;color:#fff}
+
+  /* BODY */
+  .body{padding:14px 14px 32px}
+  .card{background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:11px;border:0.5px solid #e0e8e2}
+  .sec-title{font-size:11px;font-weight:700;color:#1a5c2e;margin-bottom:9px;text-transform:uppercase;letter-spacing:0.6px}
+
+  /* BUTTONS */
+  .big-btn{border:none;border-radius:13px;padding:14px 0;font-size:15px;font-weight:600;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s,transform .1s}
+  .big-btn:active{opacity:.85;transform:scale(.98)}
+  .btn-green{background:#1a5c2e;color:#fff}
+  .btn-lite{background:#eaf6ef;color:#1a5c2e}
+  .btn-row{display:flex;gap:9px}
+
+  /* SLIDERS */
+  .slider-row{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+  .slider-lbl{font-size:12px;color:#555;width:80px;flex-shrink:0}
+  .slider-val{font-size:12px;font-weight:700;color:#222;width:46px;text-align:right;flex-shrink:0}
+  input[type=range]{flex:1;cursor:pointer;-webkit-appearance:none;height:4px;border-radius:2px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+
+  /* PILLS */
+  .pill-row{display:flex;gap:7px;margin-bottom:10px}
+  .pill{flex:1;text-align:center;background:#f5faf5;border-radius:10px;padding:8px 4px;border:0.5px solid #e0e8e2}
+  .pill-val{font-size:15px;font-weight:700}
+  .pill-lbl{font-size:9px;color:#888;margin-top:2px;line-height:1.4}
+
+  /* TAGS */
+  .tag{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;margin-right:4px;margin-bottom:3px}
+
+  /* ACCORDION */
+  .acc-btn{background:none;border:none;cursor:pointer;width:100%;padding:0;display:flex;justify-content:space-between;align-items:center}
+  .acc-arrow{color:#27ae60;font-size:15px;flex-shrink:0}
+
+  /* SCAN SCREEN */
+  .spin{width:52px;height:52px;border:4px solid #27ae60;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 18px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .step-item{font-size:11px;color:#ccc;margin-bottom:6px;transition:color .4s,transform .3s;transform:translateX(0)}
+  .step-item.done{color:#27ae60}
+
+  /* BAR CHART */
+  .bar-row{margin-bottom:6px}
+  .bar-label{display:flex;justify-content:space-between;font-size:10px;color:#555;margin-bottom:2px}
+  .bar-bg{height:6px;background:#f0f0f0;border-radius:3px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:3px;transition:width .6s ease}
+
+  /* ENV ROW */
+  .env-row{display:flex;gap:7px}
+  .env-item{flex:1;text-align:center;background:#f5faf5;border-radius:9px;padding:7px 3px;border:0.5px solid #e0e8e2}
+  .env-val{font-size:12px;font-weight:700}
+  .env-lbl{font-size:9px;color:#888;margin-top:1px;line-height:1.3}
+
+  /* CAF */
+  .caf-row{display:flex;gap:7px;justify-content:center}
+  .caf-item{flex:1;text-align:center}
+  .caf-val{font-size:15px;font-weight:700}
+  .caf-lbl{font-size:9px;color:#888}
+  .caf-bar{height:3px;background:#f0f0f0;border-radius:2px;margin-top:3px}
+  .caf-fill{height:100%;border-radius:2px}
+
+  /* PIPELINE */
+  .pi-item{display:flex;gap:9px;align-items:flex-start;margin-bottom:8px}
+  .pi-icon{font-size:15px;flex-shrink:0;margin-top:1px}
+  .pi-title{font-size:12px;font-weight:600;color:#1a3d22}
+  .pi-sub{font-size:10px;color:#888;line-height:1.4;margin-top:1px}
+
+  /* STATS */
+  .stats-row{display:flex;justify-content:space-around}
+  .stat-item{text-align:center}
+  .stat-val{font-size:17px;font-weight:700;color:#7ddba8}
+  .stat-lbl{font-size:9px;color:#5e9e76;margin-top:1px}
+
+  /* ERROR */
+  .err-box{background:#fdecea;color:#c0392b;border-radius:10px;padding:9px 13px;margin-bottom:10px;font-size:12px;display:none}
+
+  /* NDVI HINT */
+  .ndvi-hint{display:flex;align-items:center;gap:7px;margin-top:4px;padding:5px 9px;background:#f5faf5;border-radius:7px}
+  .ndvi-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+
+  /* RESULT HEADER */
+  .res-header{display:flex;gap:12px;align-items:flex-start}
+  .res-img{width:90px;height:90px;object-fit:cover;border-radius:11px;flex-shrink:0}
+
+  @media(max-width:400px){
+    .hdr-title{font-size:17px}
+    .body{padding:12px 12px 28px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     HOME SCREEN
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-home" class="screen active">
+  <div class="hdr">
+    <div class="hdr-icon">🌿</div>
+    <div>
+      <div class="hdr-title">CropScan</div>
+      <div class="hdr-sub">AI Precision Agriculture</div>
+    </div>
+    <div id="home-badge" class="mode-badge mode-demo" style="margin-left:auto">Checking…</div>
+  </div>
+  <div class="body">
+    <div id="err-box" class="err-box"></div>
+
+    <!-- Capture buttons -->
+    <div class="card" style="text-align:center;padding-top:22px;padding-bottom:22px">
+      <div style="font-size:28px;margin-bottom:5px">🌱</div>
+      <div style="font-size:16px;font-weight:700;color:#1a3d22;margin-bottom:3px">Diagnose Your Crop</div>
+      <div style="font-size:12px;color:#888;margin-bottom:18px">38 diseases · MobileNetV3 · NDVI fusion · CAF</div>
+      <div class="btn-row">
+        <button class="big-btn btn-green" onclick="triggerCamera()">📷 Live Camera</button>
+        <button class="big-btn btn-lite" onclick="triggerGallery()">🖼 Gallery</button>
+      </div>
+      <input type="file" id="cam-input" accept="image/*" capture="environment" style="display:none" onchange="handleFile(this)">
+      <input type="file" id="file-input" accept="image/*" style="display:none" onchange="handleFile(this)">
+      <!-- Background Removal Toggle -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding:10px 14px;background:#f5faf5;border-radius:11px;border:0.5px solid #c8e6c9">
+        <div>
+          <div style="font-size:12px;font-weight:600;color:#1a3d22">🔧 Background Removal</div>
+          <div style="font-size:10px;color:#888;margin-top:1px">Removes soil/sky — improves accuracy</div>
+        </div>
+        <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer">
+          <input type="checkbox" id="bg-toggle" checked style="opacity:0;width:0;height:0">
+          <span id="bg-slider" style="position:absolute;top:0;left:0;right:0;bottom:0;background:#27ae60;border-radius:24px;transition:.3s">
+            <span id="bg-knob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;border-radius:50%;transition:.3s"></span>
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Environmental inputs -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div class="sec-title" style="margin-bottom:0">Environmental Inputs</div>
+        <button id="wx-btn" onclick="fetchLiveWeather()" style="background:#1a5c2e;color:#fff;border:none;border-radius:20px;padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px">
+          🌐 Live Weather
+        </button>
+      </div>
+
+      <!-- Live weather status bar -->
+      <div id="wx-status" style="display:none;margin-bottom:10px;padding:7px 11px;border-radius:9px;font-size:11px;align-items:center;gap:7px">
+        <span id="wx-status-text"></span>
+      </div>
+
+      <!-- Live weather display card -->
+      <div id="wx-live-card" style="display:none;margin-bottom:12px;padding:11px 13px;background:#f0faf4;border-radius:11px;border:1px solid #c8e6c9">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#1a3d22" id="wx-city">📍 Detecting location…</div>
+            <div style="font-size:10px;color:#888;margin-top:1px" id="wx-time"></div>
+          </div>
+          <div id="wx-icon" style="font-size:26px">🌤</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1;text-align:center;background:#fff;border-radius:8px;padding:7px 4px;border:0.5px solid #e0e8e2">
+            <div style="font-size:17px;font-weight:700;color:#e74c3c" id="wx-temp-val">--</div>
+            <div style="font-size:9px;color:#888;margin-top:1px">Temperature</div>
+          </div>
+          <div style="flex:1;text-align:center;background:#fff;border-radius:8px;padding:7px 4px;border:0.5px solid #e0e8e2">
+            <div style="font-size:17px;font-weight:700;color:#3498db" id="wx-hum-val">--</div>
+            <div style="font-size:9px;color:#888;margin-top:1px">Humidity</div>
+          </div>
+          <div style="flex:1;text-align:center;background:#fff;border-radius:8px;padding:7px 4px;border:0.5px solid #e0e8e2">
+            <div style="font-size:17px;font-weight:700;color:#e67e22" id="wx-wind-val">--</div>
+            <div style="font-size:9px;color:#888;margin-top:1px">Wind km/h</div>
+          </div>
+          <div style="flex:1;text-align:center;background:#fff;border-radius:8px;padding:7px 4px;border:0.5px solid #e0e8e2">
+            <div style="font-size:17px;font-weight:700;color:#8e44ad" id="wx-rain-val">--</div>
+            <div style="font-size:9px;color:#888;margin-top:1px">Rain mm</div>
+          </div>
+        </div>
+        <div style="margin-top:8px;padding:6px 10px;background:#fff;border-radius:8px;border:0.5px solid #e0e8e2">
+          <div style="font-size:10px;color:#888;margin-bottom:3px">Weather Stress Score (Eq.14)</div>
+          <div style="height:6px;background:#f0f0f0;border-radius:3px;overflow:hidden">
+            <div id="wx-stress-bar" style="height:100%;border-radius:3px;background:#27ae60;transition:width 0.6s ease;width:0%"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:3px">
+            <span style="font-size:9px;color:#888">Low stress</span>
+            <span style="font-size:10px;font-weight:700" id="wx-stress-val">--</span>
+            <span style="font-size:9px;color:#888">High stress</span>
+          </div>
+        </div>
+        <div style="margin-top:7px;font-size:10px;color:#27ae60;font-weight:600" id="wx-applied">✅ Applied to sliders automatically</div>
+      </div>
+
+      <div style="font-size:10px;color:#999;margin-bottom:10px" id="slider-hint">Adjust manually or tap Live Weather to auto-fill</div>
+
+      <div class="slider-row">
+        <span class="slider-lbl">Temperature</span>
+        <input type="range" id="s-temp" min="10" max="45" step="1" value="28"
+               style="accent-color:#e74c3c" oninput="updateSliders()">
+        <span class="slider-val" id="v-temp">28°C</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-lbl">Humidity</span>
+        <input type="range" id="s-hum" min="20" max="100" step="1" value="65"
+               style="accent-color:#3498db" oninput="updateSliders()">
+        <span class="slider-val" id="v-hum">65%</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-lbl">NDVI</span>
+        <input type="range" id="s-ndvi" min="0" max="100" step="1" value="45"
+               style="accent-color:#27ae60" oninput="updateSliders()">
+        <span class="slider-val" id="v-ndvi">0.45</span>
+      </div>
+      <div class="ndvi-hint">
+        <div class="ndvi-dot" id="ndvi-dot" style="background:#27ae60"></div>
+        <span id="ndvi-text" style="font-size:11px;color:#555">Moderate vegetation</span>
+      </div>
+    </div>
+
+    <!-- Pipeline -->
+    <div class="card">
+      <div class="sec-title">Model Pipeline</div>
+      <div class="pi-item"><span class="pi-icon">🧠</span><div><div class="pi-title">MobileNetV3-Large</div><div class="pi-sub">38-class PlantVillage · 224×224 · 2-phase fine-tune</div></div></div>
+      <div class="pi-item"><span class="pi-icon">🔥</span><div><div class="pi-title">Grad-CAM (Eq.4–5)</div><div class="pi-sub">Explainability heatmap on conv_head layer</div></div></div>
+      <div class="pi-item"><span class="pi-icon">🌍</span><div><div class="pi-title">NDVI / EVI / SAVI (Eq.10–12)</div><div class="pi-sub">Vegetation indices · normalised Vn (Eq.13)</div></div></div>
+      <div class="pi-item"><span class="pi-icon">☁️</span><div><div class="pi-title">Weather Stress (Eq.14)</div><div class="pi-sub">Temp + humidity → Ws stress score</div></div></div>
+      <div class="pi-item"><span class="pi-icon">⚗️</span><div><div class="pi-title">XGBoost Fusion (Eq.15)</div><div class="pi-sub">w1=0.45 · w2=0.35 · w3=0.20 (Eq.18)</div></div></div>
+      <div class="pi-item" style="margin-bottom:0"><span class="pi-icon">✨</span><div><div class="pi-title">CAF — Novel Algorithm</div><div class="pi-sub">Confidence-adaptive weights per sample</div></div></div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="card" style="background:#1a5c2e;border-color:#1a5c2e">
+      <div class="stats-row">
+        <div class="stat-item"><div class="stat-val">85%+</div><div class="stat-lbl">Accuracy</div></div>
+        <div class="stat-item"><div class="stat-val">38</div><div class="stat-lbl">Diseases</div></div>
+        <div class="stat-item"><div class="stat-val">CAF</div><div class="stat-lbl">Novel Fusion</div></div>
+        <div class="stat-item"><div class="stat-val">ONNX</div><div class="stat-lbl">Exported</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCANNING SCREEN
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-scan" class="screen">
+  <div class="hdr">
+    <div class="hdr-icon">🌿</div>
+    <div><div class="hdr-title">CropScan</div><div class="hdr-sub">Analysing your leaf…</div></div>
+  </div>
+  <div class="body" style="text-align:center;padding-top:28px">
+    <img id="scan-preview" src="" alt="" style="width:100%;max-width:280px;height:200px;object-fit:cover;border-radius:14px;margin-bottom:22px;display:none">
+    <div class="spin"></div>
+    <div style="font-size:16px;font-weight:700;color:#1a5c2e;margin-bottom:5px">Analysing leaf…</div>
+    <div style="font-size:12px;color:#888;margin-bottom:20px">Running MobileNetV3 · NDVI fusion · CAF</div>
+    <div class="card" style="text-align:left">
+      <div class="step-item" id="step1">⬜ Preprocessing image (224×224)</div>
+      <div class="step-item" id="step2">⬜ MobileNetV3 inference</div>
+      <div class="step-item" id="step3">⬜ Computing NDVI + Weather stress (Eq.14)</div>
+      <div class="step-item" id="step4">⬜ XGBoost health fusion (Eq.15)</div>
+      <div class="step-item" id="step5" style="margin-bottom:0">⬜ CAF adaptive weights (novel)</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     RESULT SCREEN
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-result" class="screen">
+  <div class="hdr">
+    <button class="back-btn" onclick="reset()">←</button>
+    <div><div class="hdr-title">Scan Result</div><div class="hdr-sub">MobileNetV3 + CAF</div></div>
+    <div id="result-badge" class="mode-badge" style="margin-left:auto"></div>
+  </div>
+  <div class="body">
+
+    <!-- Disease + gauge -->
+    <div class="card">
+      <div class="res-header">
+        <img id="res-img" class="res-img" src="" alt="" style="display:none">
+        <div style="flex:1">
+          <div id="res-disease" style="font-size:14px;font-weight:700;color:#1a3d22;margin-bottom:5px;line-height:1.35"></div>
+          <div id="res-tags" style="margin-bottom:8px"></div>
+          <div style="display:flex;flex-direction:column;align-items:center">
+            <svg id="gauge-svg" viewBox="0 0 160 95" style="width:100%;max-width:190px"></svg>
+            <div id="gauge-label" style="font-size:10px;color:#888;margin-top:1px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Health score breakdown -->
+    <div class="card">
+      <div class="sec-title">Health Score — Eq.15</div>
+      <div id="score-pills" class="pill-row"></div>
+      <div id="score-bar" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:9px">
+        <div id="score-h" style="font-size:13px;font-weight:600"></div>
+        <div id="score-status" style="font-size:13px;font-weight:700"></div>
+      </div>
+    </div>
+
+    <!-- CAF accordion -->
+    <div class="card">
+      <button class="acc-btn" onclick="toggleSection('caf-body','caf-arrow')">
+        <span class="sec-title" style="margin-bottom:0">CAF — Adaptive Fusion (Novel)</span>
+        <span class="acc-arrow" id="caf-arrow">▼</span>
+      </button>
+      <div id="caf-body" style="display:none;margin-top:10px">
+        <div style="font-size:11px;color:#666;margin-bottom:9px;line-height:1.5">CAF re-weights each modality dynamically by its real-time reliability — unlike fixed Eq.18 weights.</div>
+        <div id="caf-weights" class="caf-row"></div>
+        <div id="caf-result" style="display:flex;justify-content:space-between;align-items:center;padding:9px 13px;border-radius:9px;margin-top:11px">
+          <div style="font-size:11px;color:#666">CAF health score</div>
+          <div id="caf-score" style="font-size:14px;font-weight:700"></div>
+        </div>
+        <div id="caf-debug" style="font-size:10px;color:#bbb;margin-top:7px"></div>
+      </div>
+    </div>
+
+    <!-- Environmental inputs used -->
+    <div class="card">
+      <div class="sec-title">Environmental Inputs Used</div>
+      <div id="env-row" class="env-row"></div>
+    </div>
+
+    <!-- Top-5 accordion -->
+    <div class="card">
+      <button class="acc-btn" onclick="toggleSection('top5-body','top5-arrow')">
+        <span class="sec-title" style="margin-bottom:0">Top-5 Predictions</span>
+        <span class="acc-arrow" id="top5-arrow">▼</span>
+      </button>
+      <div id="top5-body" style="display:none;margin-top:10px"></div>
+    </div>
+
+    <!-- Treatment -->
+    <div class="card" id="treatment-card">
+      <div id="tx-title" class="sec-title"></div>
+      <div id="tx-text" style="font-size:12px;color:#333;line-height:1.65"></div>
+    </div>
+
+    <button class="big-btn btn-green" onclick="reset()">📷 Scan Another Leaf</button>
+  </div>
+</div>
+
+<script>
+// ── CONFIG — points to your Flask backend ─────────────────────────────────────
+// When running on the same machine: http://localhost:5000
+// When on phone (same WiFi):        http://192.168.x.x:5000
+const API_BASE = window.location.origin.includes('localhost') || window.location.origin.includes('192.168') || window.location.origin.includes('127.0')
+  ? window.location.origin
+  : 'http://localhost:5000';
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function ndviColor(v){
+  if(v<0.2)return'#e74c3c';if(v<0.4)return'#e67e22';
+  if(v<0.6)return'#f1c40f';if(v<0.75)return'#2ecc71';return'#1a8a4a';
+}
+function ndviText(v){
+  if(v<0.2)return'Bare soil / severe stress';
+  if(v<0.4)return'Sparse / stressed vegetation';
+  if(v<0.6)return'Moderate vegetation';
+  if(v<0.75)return'Healthy dense vegetation';
+  return'Very dense healthy canopy';
+}
+function classifyH(h){
+  if(h>60)return{lbl:'Healthy',col:'#27ae60',bg:'#eaf6ef'};
+  if(h>=30)return{lbl:'Moderate Risk',col:'#e67e22',bg:'#fef4e8'};
+  return{lbl:'High Risk',col:'#e74c3c',bg:'#fdecea'};
+}
+const SEV={
+  none:    {bg:'#eaf6ef',col:'#1e8449',lbl:'Healthy'},
+  moderate:{bg:'#fef4e8',col:'#d35400',lbl:'Moderate'},
+  high:    {bg:'#fdecea',col:'#c0392b',lbl:'High Risk'},
+  critical:{bg:'#fdecea',col:'#922b21',lbl:'CRITICAL'},
+  unknown: {bg:'#f4f4f4',col:'#666',   lbl:'Unknown'}
+};
+
+// ── SLIDERS ──────────────────────────────────────────────────────────────────
+function updateSliders(){
+  const t=+document.getElementById('s-temp').value;
+  const h=+document.getElementById('s-hum').value;
+  const nv=document.getElementById('s-ndvi').value/100;
+  document.getElementById('v-temp').textContent=t+'°C';
+  document.getElementById('v-hum').textContent=h+'%';
+  document.getElementById('v-ndvi').textContent=nv.toFixed(2);
+  document.getElementById('ndvi-dot').style.background=ndviColor(nv);
+  document.getElementById('ndvi-text').textContent=ndviText(nv);
+}
+
+// ── SCREEN NAVIGATION ─────────────────────────────────────────────────────────
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── CHECK BACKEND STATUS ──────────────────────────────────────────────────────
+async function checkStatus(){
+  try{
+    const r=await fetch(API_BASE+'/status',{signal:AbortSignal.timeout(3000)});
+    const d=await r.json();
+    const badge=document.getElementById('home-badge');
+    if(d.model_loaded){
+      badge.textContent='Model Live ✓';
+      badge.className='mode-badge mode-real';
+    } else {
+      badge.textContent='Demo Mode';
+      badge.className='mode-badge mode-demo';
+    }
+  } catch(e){
+    const badge=document.getElementById('home-badge');
+    badge.textContent='Backend Offline';
+    badge.className='mode-badge';
+    badge.style.background='#e74c3c';
+    badge.style.color='#fff';
+  }
+}
+
+// ── FILE HANDLING ─────────────────────────────────────────────────────────────
+function triggerCamera(){ document.getElementById('cam-input').click(); }
+function triggerGallery(){ document.getElementById('file-input').click(); }
+
+function handleFile(inp){
+  const file=inp.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const src=e.target.result;
+    const prev=document.getElementById('scan-preview');
+    prev.src=src; prev.style.display='block';
+    document.getElementById('err-box').style.display='none';
+    showScreen('scan');
+    resetSteps();
+    animateSteps();
+    sendToBackend(file, src);
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── STEP ANIMATION ────────────────────────────────────────────────────────────
+const stepTexts=['Preprocessing image (224×224)','MobileNetV3 inference','Computing NDVI + Weather stress (Eq.14)','XGBoost health fusion (Eq.15)','CAF adaptive weights (novel)'];
+function resetSteps(){
+  stepTexts.forEach((t,i)=>{
+    const el=document.getElementById('step'+(i+1));
+    el.textContent='⬜ '+t; el.className='step-item';
+  });
+}
+function animateSteps(){
+  [400,800,1100,1400,1700].forEach((delay,i)=>{
+    setTimeout(()=>{
+      const el=document.getElementById('step'+(i+1));
+      el.textContent='✅ '+stepTexts[i];
+      el.className='step-item done';
+    },delay);
+  });
+}
+
+// ── API CALL ──────────────────────────────────────────────────────────────────
+async function sendToBackend(file, previewSrc){
+  const temp=document.getElementById('s-temp').value;
+  const hum=document.getElementById('s-hum').value;
+  const ndvi=(document.getElementById('s-ndvi').value/100).toFixed(2);
+
+  const bgOn = document.getElementById('bg-toggle') ? document.getElementById('bg-toggle').checked : true;
+  const form=new FormData();
+  form.append('image', file);
+  form.append('temperature', temp);
+  form.append('humidity', hum);
+  form.append('ndvi', ndvi);
+  form.append('bg_removal', bgOn ? 'true' : 'false');
+
+  try{
+    const res=await fetch(API_BASE+'/predict',{method:'POST',body:form});
+    if(!res.ok) throw new Error('Server error: '+res.status);
+    const data=await res.json();
+    if(data.error) throw new Error(data.error);
+    renderResult(data, previewSrc);
+    showScreen('result');
+  } catch(e){
+    showScreen('home');
+    const eb=document.getElementById('err-box');
+    eb.textContent='Error: '+e.message+'. Make sure your Flask server is running at '+API_BASE;
+    eb.style.display='block';
+  }
+}
+
+// ── GAUGE SVG ─────────────────────────────────────────────────────────────────
+function renderGauge(score){
+  const h=Math.max(0,Math.min(100,score));
+  const cls=classifyH(h);
+  const norm=h/100;
+  const ang=(1-norm)*Math.PI;
+  const x=80+60*Math.cos(ang), y=80-60*Math.sin(ang);
+  const arcs=[['#e74c3c',0,0.3],['#e67e22',0.3,0.6],['#27ae60',0.6,1.0]];
+  let paths='';
+  arcs.forEach(([c,lo,hi])=>{
+    const a1=(1-hi)*Math.PI,a2=(1-lo)*Math.PI;
+    const x1=80+68*Math.cos(a1),y1=80-68*Math.sin(a1);
+    const x2=80+68*Math.cos(a2),y2=80-68*Math.sin(a2);
+    paths+=`<path d="M ${x1.toFixed(1)} ${y1.toFixed(1)} A 68 68 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.85"/>`;
+  });
+  document.getElementById('gauge-svg').innerHTML=`
+    ${paths}
+    <line x1="80" y1="80" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${cls.col}" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="80" cy="80" r="5" fill="${cls.col}"/>
+    <text x="80" y="72" text-anchor="middle" font-size="19" font-weight="600" fill="${cls.col}">${h.toFixed(1)}%</text>
+    <text x="80" y="88" text-anchor="middle" font-size="10" fill="#888">${cls.lbl}</text>`;
+}
+
+// ── RENDER RESULT ─────────────────────────────────────────────────────────────
+function renderResult(d, previewSrc){
+  const sevS=SEV[d.severity]||SEV.unknown;
+  const hCls=classifyH(d.health_score);
+  const caf=d.caf||{};
+  const cafH=caf.H_adaptive!=null?caf.H_adaptive*100:d.health_score;
+  const cafCls=classifyH(cafH);
+
+  // Image
+  const ri=document.getElementById('res-img');
+  ri.src=previewSrc; ri.style.display='block';
+
+  // Disease + tags
+  document.getElementById('res-disease').textContent=d.disease_label;
+  document.getElementById('res-tags').innerHTML=
+    `<span class="tag" style="background:${sevS.bg};color:${sevS.col}">${sevS.lbl}</span>`+
+    `<span class="tag" style="background:#e8f4ff;color:#1a5fa6">CNN ${d.confidence}%</span>`+
+    (d.bg_removal_used ? `<span class="tag" style="background:#f0e6ff;color:#7b2fa8">🔧 BG Removed</span>` : '')+
+    (d.demo_mode?`<span class="tag" style="background:#fff3e0;color:#e67e22">Demo</span>`:`<span class="tag" style="background:#eaf6ef;color:#1e8449">Real Model</span>`);
+
+  // Result badge
+  const rb=document.getElementById('result-badge');
+  rb.textContent=d.demo_mode?'Demo':'Real Model ✓';
+  rb.className='mode-badge '+(d.demo_mode?'mode-demo':'mode-real');
+
+  // Gauge
+  renderGauge(d.health_score);
+  document.getElementById('gauge-label').textContent='Health score H = '+d.health_score+'%';
+
+  // Score pills
+  const feats=[
+    {l:'CNN health',  v:((1-(d.pd||0))*100).toFixed(0)+'%',  c:'#3498db', w:'w1=0.45'},
+    {l:'NDVI vigour', v:(d.ndvi_used*100).toFixed(0)+'%',      c:'#27ae60', w:'w2=0.35'},
+    {l:'Wx favour',   v:((1-d.weather_stress)*100).toFixed(0)+'%', c:'#e67e22', w:'w3=0.20'}
+  ];
+  document.getElementById('score-pills').innerHTML=feats.map(f=>
+    `<div class="pill"><div class="pill-val" style="color:${f.c}">${f.v}</div><div class="pill-lbl">${f.l}<br><span style="color:#bbb">${f.w}</span></div></div>`
+  ).join('');
+
+  const sb=document.getElementById('score-bar');
+  sb.style.background=hCls.bg;
+  document.getElementById('score-h').textContent='H = '+d.health_score+'%';
+  document.getElementById('score-h').style.color=hCls.col;
+  document.getElementById('score-status').textContent=hCls.lbl;
+  document.getElementById('score-status').style.color=hCls.col;
+
+  // CAF
+  if(caf.w1!=null){
+    document.getElementById('caf-weights').innerHTML=
+      [['CNN',caf.w1,'#3498db'],['NDVI',caf.w2,'#27ae60'],['Weather',caf.w3,'#e67e22']].map(([l,w,c])=>
+        `<div class="caf-item"><div class="caf-val" style="color:${c}">${(w*100).toFixed(0)}%</div><div class="caf-lbl">${l}</div><div class="caf-bar"><div class="caf-fill" style="width:${(w*100).toFixed(0)}%;background:${c}"></div></div></div>`
+      ).join('');
+    document.getElementById('caf-result').style.background=cafCls.bg;
+    document.getElementById('caf-score').textContent=cafH.toFixed(1)+'% — '+cafCls.lbl;
+    document.getElementById('caf-score').style.color=cafCls.col;
+    document.getElementById('caf-debug').textContent=
+      `r_cnn=${(caf.r_cnn||0).toFixed(2)} · r_ndvi=${(caf.r_ndvi||0).toFixed(2)} · r_wx=${(caf.r_weather||0).toFixed(2)}`;
+  }
+
+  // Env row
+  document.getElementById('env-row').innerHTML=
+    [{l:'Temperature',v:d.temperature+'°C',c:'#e74c3c'},
+     {l:'Humidity',   v:d.humidity+'%',    c:'#3498db'},
+     {l:'NDVI',       v:d.ndvi_used.toFixed(2), c:ndviColor(d.ndvi_used)},
+     {l:'Wx stress',  v:d.weather_stress.toFixed(2),c:'#e67e22'}
+    ].map(x=>`<div class="env-item"><div class="env-val" style="color:${x.c}">${x.v}</div><div class="env-lbl">${x.l}</div></div>`).join('');
+
+  // Top-5
+  const max=d.top5[0].prob;
+  document.getElementById('top5-body').innerHTML=d.top5.map((t,i)=>
+    `<div class="bar-row"><div class="bar-label"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72%;display:inline-block">${t.label}</span><span style="font-weight:600">${t.prob}%</span></div><div class="bar-bg"><div class="bar-fill" style="width:${((t.prob/max)*100).toFixed(0)}%;background:${i===0?'#27ae60':'#b0c8b5'}"></div></div></div>`
+  ).join('');
+
+  // Treatment
+  const tc=document.getElementById('treatment-card');
+  tc.style.background=sevS.bg;
+  tc.style.border=`1.5px solid ${sevS.col}33`;
+  document.getElementById('tx-title').textContent='Recommended Action';
+  document.getElementById('tx-title').style.color=sevS.col;
+  document.getElementById('tx-text').textContent=d.treatment;
+}
+
+// ── ACCORDION ─────────────────────────────────────────────────────────────────
+const accState={};
+function toggleSection(bodyId, arrowId){
+  accState[bodyId]=!accState[bodyId];
+  document.getElementById(bodyId).style.display=accState[bodyId]?'block':'none';
+  document.getElementById(arrowId).textContent=accState[bodyId]?'▲':'▼';
+}
+
+// ── RESET ─────────────────────────────────────────────────────────────────────
+function reset(){
+  document.getElementById('cam-input').value='';
+  document.getElementById('file-input').value='';
+  Object.keys(accState).forEach(k=>accState[k]=false);
+  showScreen('home');
+  checkStatus();
+}
+
+// ── BG TOGGLE ANIMATION ───────────────────────────────────────────────────────
+const bgToggle = document.getElementById('bg-toggle');
+if(bgToggle){
+  bgToggle.addEventListener('change', function(){
+    const knob = document.getElementById('bg-knob');
+    const slider = document.getElementById('bg-slider');
+    if(this.checked){
+      knob.style.left = '23px';
+      slider.style.background = '#27ae60';
+    } else {
+      knob.style.left = '3px';
+      slider.style.background = '#ccc';
+    }
+  });
+}
+
+
+// ── WEATHER CODE → ICON ───────────────────────────────────────────────────────
+function wxIcon(code){
+  if(code===0)return{icon:'☀️',desc:'Clear sky'};
+  if(code<=2)return{icon:'⛅',desc:'Partly cloudy'};
+  if(code<=3)return{icon:'☁️',desc:'Overcast'};
+  if(code<=48)return{icon:'🌫',desc:'Foggy'};
+  if(code<=57)return{icon:'🌦',desc:'Drizzle'};
+  if(code<=67)return{icon:'🌧',desc:'Rain'};
+  if(code<=77)return{icon:'❄️',desc:'Snow'};
+  if(code<=82)return{icon:'🌦',desc:'Rain showers'};
+  if(code<=99)return{icon:'⛈',desc:'Thunderstorm'};
+  return{icon:'🌤',desc:'Unknown'};
+}
+function calcWxStress(t,h){
+  return Math.min(0.6*Math.abs(t-25)/25+0.4*(1-h/100),1.0);
+}
+async function getCityName(lat,lon){
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+    const d=await r.json();
+    return d.address.city||d.address.town||d.address.village||d.address.county||'Your Location';
+  }catch(e){return 'Your Location';}
+}
+
+async function fetchLiveWeather(){
+  const btn=document.getElementById('wx-btn');
+  const statusDiv=document.getElementById('wx-status');
+  const statusText=document.getElementById('wx-status-text');
+
+  btn.textContent='⏳ Fetching…';
+  btn.disabled=true;
+  statusDiv.style.display='flex';
+  statusDiv.style.background='#fff8e1';
+  statusDiv.style.border='1px solid #ffe082';
+  statusText.style.color='#e67e22';
+  statusText.textContent='📍 Getting your location…';
+
+  try{
+    // Step 1 — GPS
+    const pos=await new Promise((res,rej)=>
+      navigator.geolocation.getCurrentPosition(res,rej,{timeout:10000})
+    );
+    const {latitude:lat,longitude:lon}=pos.coords;
+    statusText.textContent='🌐 Fetching live weather…';
+
+    // Step 2 — Open-Meteo (FREE, no API key needed)
+    const wxRes=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&timezone=auto`);
+    const wxData=await wxRes.json();
+    const cur=wxData.current;
+    const temp=Math.round(cur.temperature_2m);
+    const hum=Math.round(cur.relative_humidity_2m);
+    const wind=Math.round(cur.wind_speed_10m);
+    const rain=cur.precipitation.toFixed(1);
+    const wInfo=wxIcon(cur.weather_code);
+    const ws=calcWxStress(temp,hum);
+
+    // Step 3 — City name
+    statusText.textContent='📍 Getting location name…';
+    const city=await getCityName(lat,lon);
+
+    // Step 4 — Push to sliders
+    document.getElementById('s-temp').value=Math.max(10,Math.min(45,temp));
+    document.getElementById('s-hum').value=Math.max(20,Math.min(100,hum));
+    updateSliders();
+
+    // Step 5 — Show card
+    const now=new Date();
+    document.getElementById('wx-city').textContent='📍 '+city;
+    document.getElementById('wx-time').textContent=wInfo.desc+' · '+now.toLocaleTimeString();
+    document.getElementById('wx-icon').textContent=wInfo.icon;
+    document.getElementById('wx-temp-val').textContent=temp+'°C';
+    document.getElementById('wx-hum-val').textContent=hum+'%';
+    document.getElementById('wx-wind-val').textContent=wind;
+    document.getElementById('wx-rain-val').textContent=rain;
+
+    const stressPct=Math.round(ws*100);
+    const sb=document.getElementById('wx-stress-bar');
+    sb.style.width=stressPct+'%';
+    sb.style.background=ws<0.3?'#27ae60':ws<0.6?'#e67e22':'#e74c3c';
+    document.getElementById('wx-stress-val').textContent=stressPct+'%';
+    document.getElementById('wx-stress-val').style.color=ws<0.3?'#27ae60':ws<0.6?'#e67e22':'#e74c3c';
+    document.getElementById('wx-live-card').style.display='block';
+
+    statusDiv.style.background='#eaf6ef';
+    statusDiv.style.border='1px solid #a8d5b5';
+    statusText.style.color='#1e8449';
+    statusText.textContent='✅ Live weather applied — sliders updated!';
+    btn.textContent='🔄 Refresh';
+    btn.disabled=false;
+
+  }catch(e){
+    statusDiv.style.background='#fdecea';
+    statusDiv.style.border='1px solid #f5c6c6';
+    statusText.style.color='#c0392b';
+    if(e.code===1) statusText.textContent='❌ Location denied. Please allow location access.';
+    else if(e.code===2) statusText.textContent='❌ Location unavailable. Check GPS.';
+    else statusText.textContent='❌ Failed: '+e.message+'. Check internet.';
+    btn.textContent='🌐 Live Weather';
+    btn.disabled=false;
+  }
+}
+
+updateSliders();
+checkStatus();
+setInterval(checkStatus, 15000);
+</script>
+</body>
+</html>

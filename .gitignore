@@ -1,0 +1,40 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment variables
+.env
+.env.local
+
+# MacOS specific files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Flask/FastAPI specific
+instance/
+.webassets-cache
+__pypackages__/
+
+# OS Generated files
+Thumbs.db
+
+# Machine Learning models (Uncomment if you decide to ignore your ONNX/H5 models)
+# models/*.onnx
+# models/*.h5
+# models/*.pkl
